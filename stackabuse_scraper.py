@@ -6,8 +6,8 @@ import csv
 import datetime
 import logging
 from bs4 import BeautifulSoup
+from argparse import ArgumentParser
 
-logging.basicConfig(filename='scraper.log',level=logging.INFO)
 BASE_URL = 'https://stackabuse.com'
 
 def parse_posts(author_url):
@@ -63,5 +63,41 @@ def get_posts_csv(filename, author_url):
             csv_writer.writerow([post['title'], post['link'], post['date']])
 
 
+def main():
+    '''Argument parser for scraper'''
+    parser = ArgumentParser(description='Web scraper for Stack Abuse writers')
+    parser.add_argument('-a', '--author', dest='author',
+                        help='Writer whose articles you want', required=True)
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--csv', action='store_true',
+                       help='Save data in CSV format')
+    group.add_argument('--json', action='store_true',
+                       help='Save data in JSON format')
+
+    parser.add_argument('-l', '--loglevel', dest='loglevel',
+                        help='Select log level', default='info')
+    args = parser.parse_args()
+
+    # Set logging preferences
+    if args.loglevel == 'error':
+        log_level = logging.ERROR
+    elif args.loglevel == 'debug':
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+
+    logging.basicConfig(filename='stackabuse_scraper.log',level=log_level)
+
+    author_url = '{}/author/{}/'.format(BASE_URL, args.author)
+    # Determine output format
+    if args.csv:
+        get_posts_csv('stackabuse_articles.csv', author_url)
+    elif args.json:
+        get_posts_json('stackabuse_articles.json', author_url)
+    else:
+        print(json.dumps(parse_posts(author_url)))
+
+
 if __name__ == '__main__':
-    get_posts_csv('stackabuse_articles.csv', BASE_URL + '/author/usman/')
+    main()
