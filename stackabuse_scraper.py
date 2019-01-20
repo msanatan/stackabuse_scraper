@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import requests
 import json
+import csv
 import datetime
 import logging
 from bs4 import BeautifulSoup
@@ -42,7 +43,7 @@ def parse_posts(author_url):
         return []
 
 
-def get_posts(filename, author_url):
+def get_posts_json(filename, author_url):
     '''Dumps JSON for stack abuse articles'''
     posts = parse_posts(author_url)
     logging.info('Retrieved {} posts'.format(len(posts)))
@@ -50,4 +51,17 @@ def get_posts(filename, author_url):
         json.dump(posts, json_file, indent=4)
 
 
-get_posts('stackabuse_articles.json', BASE_URL + '/author/usman/')
+def get_posts_csv(filename, author_url):
+    '''Saves CSV file for stack abuse articles'''
+    posts = parse_posts(author_url)
+    logging.info('Retrieved {} posts'.format(len(posts)))
+    headers = ['Title', 'Link', 'Date']
+    with open(filename, 'w') as csv_file:
+        csv_writer = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_ALL)
+        csv_writer.writerow(headers)
+        for post in posts:
+            csv_writer.writerow([post['title'], post['link'], post['date']])
+
+
+if __name__ == '__main__':
+    get_posts_csv('stackabuse_articles.csv', BASE_URL + '/author/usman/')
