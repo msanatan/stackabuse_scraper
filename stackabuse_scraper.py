@@ -18,7 +18,7 @@ def parse_posts(author_url):
     response = requests.get(author_url, headers=headers)
     if response is not None and response.status_code == 200:
         html = BeautifulSoup(response.content, 'html.parser')
-        for article in html.select('article'):
+        for article in html.find_all('article'):
             title_tag = article.find('h2', {'class': 'post-title'}).find('a')
             title = title_tag.text
             link = BASE_URL + title_tag['href']
