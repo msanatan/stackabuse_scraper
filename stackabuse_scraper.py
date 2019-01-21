@@ -5,6 +5,8 @@ import json
 import csv
 import datetime
 import logging
+import pathlib
+from slugify import slugify
 from bs4 import BeautifulSoup
 from argparse import ArgumentParser
 
@@ -63,6 +65,24 @@ def get_posts_csv(filename, author_url):
             csv_writer.writerow([post['title'], post['link'], post['date']])
 
 
+def get_posts_markdown(author_url):
+    '''Saves posts as markdown files to work in Hexo'''
+    posts = parse_posts(author_url)
+    logging.info('Retrieved {} posts'.format(len(posts)))
+    pathlib.Path('articles').mkdir(exist_ok=True)
+    for post in posts:
+        post_slug = slugify(post['title'])
+        with open('articles/{}.md'.format(post_slug), 'w') as f:
+            f.writelines([
+                '---\n',
+                'title: {}\n'.format(post['title']),
+                'date: {}\n'.format(post['date']),
+                'categories: [other]\n',
+                'link: {}\n'.format(post['link']),
+                '---\n',
+            ])
+
+
 def main():
     '''Argument parser for scraper'''
     parser = ArgumentParser(description='Web scraper for Stack Abuse writers')
@@ -74,6 +94,8 @@ def main():
                        help='Save data in CSV format')
     group.add_argument('--json', action='store_true',
                        help='Save data in JSON format')
+    group.add_argument('--markdown', action='store_true',
+                       help='Save data as Markdown articles for Hexo')
 
     parser.add_argument('-l', '--loglevel', dest='loglevel',
                         help='Select log level', default='info')
@@ -95,6 +117,8 @@ def main():
         get_posts_csv('stackabuse_articles.csv', author_url)
     elif args.json:
         get_posts_json('stackabuse_articles.json', author_url)
+    elif args.markdown:
+        get_posts_markdown(author_url)
     else:
         print(json.dumps(parse_posts(author_url)))
 
