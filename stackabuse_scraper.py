@@ -75,7 +75,7 @@ def get_posts_markdown(author_url):
         with open('articles/{}.md'.format(post_slug), 'w') as f:
             f.writelines([
                 '---\n',
-                'title: {}\n'.format(post['title']),
+                'title: "{}"\n'.format(post['title']),
                 'date: {}\n'.format(post['date']),
                 'categories: [other]\n',
                 'link: {}\n'.format(post['link']),
