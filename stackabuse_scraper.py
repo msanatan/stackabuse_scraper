@@ -3,7 +3,7 @@
 import requests
 import json
 import csv
-import datetime
+import time
 import logging
 import pathlib
 from slugify import slugify
@@ -13,32 +13,69 @@ from argparse import ArgumentParser
 BASE_URL = 'https://stackabuse.com'
 
 
+def parse_page(page_url):
+    '''Gets more data from the article page'''
+    logging.info('Scraping {}'.format(page_url))
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'
+    }
+    response = requests.get(page_url, headers=headers)
+    if response is not None and response.status_code == 200:
+        html = BeautifulSoup(response.content, 'html.parser')
+        category_wrapper = html.find('div', {'class': 'mt-8 mb-4'})
+        categories = map(lambda x: x.text.replace(
+            '#', '').strip(), category_wrapper.find_all('a'))
+        description_data = html.find_all(
+            'meta', attrs={'name': 'description'})
+        if len(description_data) > 0:
+            description = description_data[0].get('content').strip()
+        else:
+            description = ''
+        content = html.find_all('p')[0].text.strip()
+
+        return {
+            'categories': categories,
+            'description': description,
+            'content': content,
+        }
+    else:
+        logging.error('Could not get a response for the link')
+        return {}
+
+
 def parse_posts(author_url, defaut_editor):
     '''Recursively retrieves all the posts of an blog write in stack abuse'''
     logging.info('Scraping {}'.format(author_url))
     posts = []
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'}
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'
+    }
     response = requests.get(author_url, headers=headers)
     if response is not None and response.status_code == 200:
         html = BeautifulSoup(response.content, 'html.parser')
         for article in html.find_all('div', {'class': 'p-6'}):
             article_details = article.find(
                 'a', {'class': 'block hover:no-underline'})
-            title = article_details.find('h3').text
+            title = article_details.find('h3').text.strip()
             link = BASE_URL + article_details['href']
             meta = article.find('div', {'class': 'mt-6 flex items-center'})
-            date_text = meta.find('time')['datetime']
+            date_text = meta.find('time')['datetime'].strip()
             author_data = meta.find('a', {'class': 'hover:underline'})
-            author = author_data.text
+            author = author_data.text.strip()
 
-            # date = datetime.datetime.strptime(date_text, '%B %d, %Y')
+            time.sleep(0.5)
+            page_data = parse_page(link)
+            logging.debug(page_data)
+
             post = {
                 'title': title,
                 'link': link,
                 'date': date_text,
                 'author': author,
-                'editor': defaut_editor
+                'editor': defaut_editor,
+                'description': page_data['description'],
+                'categories': page_data['categories'],
+                'content': page_data['content'],
             }
 
             posts.append(post)
@@ -91,7 +128,10 @@ def get_posts_markdown(author_url, defaut_editor):
                 'link: {}\n'.format(post['link']),
                 'author: {}\n'.format(post['author']),
                 'editor: {}\n'.format(post['editor']),
-                '---\n',
+                'description'': "{}"\n'.format(post['description']),
+                'tags'': [{}]\n'.format(', '.join(post['categories'])),
+                '---\n\n',
+                '{}\n'.format(post['content']),
             ])
 
 
